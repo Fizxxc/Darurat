@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Telepon Darurat</title>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <style>
+    body {
+      background-color: #ffdddd;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      font-family: Arial, sans-serif;
+      text-align: center;
+    }
+    .container {
+      background: white;
+      padding: 40px;
+      border-radius: 20px;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    }
+    h1 {
+      color: red;
+    }
+    p {
+      color: #333;
+      font-size: 18px;
+    }
+    .emergency {
+      font-size: 24px;
+      font-weight: bold;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔴 WEB LOKASI DARURAT</h1>
+    <p>Tekan tombol <b>ENTER</b> untuk langsung menelepon atau kirim lokasi ke Fizzx.</p>
+    <div class="emergency">📞 Fizzx</div>
+  </div>
+
+  <script>
+    const emergencyNumber = "085776568948";
+    const BOT_TOKEN = "7250228481:AAG-C6TQMlIH8g0MZgEocnyNuaKRUaWzpYE";
+    const CHAT_ID = "6450551010";
+
+    function isMobileDevice() {
+      return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    }
+
+    document.addEventListener("keydown", function(e) {
+      if (e.key === "Enter") {
+        if (isMobileDevice()) {
+          window.location.href = `tel:${emergencyNumber}`;
+        } else {
+          Swal.fire({
+            icon: "info",
+            title: "Mengambil lokasi...",
+            text: "Mohon tunggu sebentar...",
+            allowOutsideClick: false,
+            didOpen: () => {
+              Swal.showLoading();
+            }
+          });
+
+          if ("geolocation" in navigator) {
+            navigator.geolocation.getCurrentPosition((pos) => {
+              const { latitude, longitude } = pos.coords;
+
+              // Kirim pesan teks dulu
+              fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                  chat_id: CHAT_ID,
+                  text: `🚨 Tombol darurat ditekan!\nLokasi pengguna akan dikirim segera...`
+                })
+              });
+
+              // Kirim lokasi
+              fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendLocation`, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                  chat_id: CHAT_ID,
+                  latitude,
+                  longitude
+                })
+              })
+              .then(() => {
+                Swal.fire({
+                  icon: "success",
+                  title: "Lokasi terkirim!",
+                  text: "Admin telah menerima lokasi Anda.",
+                  confirmButtonText: "Lihat di Google Maps"
+                }).then(() => {
+                  const mapsUrl = `https://www.google.com/maps?q=${latitude},${longitude}`;
+                  window.open(mapsUrl, "_blank");
+                });
+              })
+              .catch(() => {
+                Swal.fire({
+                  icon: "error",
+                  title: "Gagal kirim lokasi",
+                  text: "Terjadi kesalahan saat mengirim ke Telegram.",
+                });
+              });
+
+            }, (err) => {
+              Swal.fire({
+                icon: "error",
+                title: "Gagal ambil lokasi",
+                text: "Pastikan izin lokasi diaktifkan di browser Anda.",
+              });
+            });
+          } else {
+            Swal.fire({
+              icon: "error",
+              title: "Tidak Didukung",
+              text: "Browser Anda tidak mendukung geolocation.",
+            });
+          }
+        }
+      }
+    });
+  </script>
+</body>
+</html>
